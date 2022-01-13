@@ -1,0 +1,10 @@
+site_name: tox-gh-matrix
+site_description: Generate GitHub workflow matrix from tox config
+site_author: Mike Edmunds
+
+theme: readthedocs
+
+repo_url: https://github.com/medmunds/tox-gh-matrix
+
+pages:
+- Home: index.md

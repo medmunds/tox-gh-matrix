@@ -69,8 +69,13 @@ def test_python_version_to_prerelease_spec(python, expected):
         ("Jython", (3, 4, 8, "final", 0), None, "jython-3.4.8"),
     ],
 )
-def test_interpreter_info_to_version(implementation, version_info, extra_version_info, expected):
-    interpreter_info = InterpreterInfo(
+def test_interpreter_info_to_version(
+    implementation, version_info, extra_version_info, expected, ignore_extra_kwargs
+):
+    # (InterpreterInfo constructor has changed required kwargs
+    # over time, in ways which aren't relevant to this plugin.)
+    interpreter_info = ignore_extra_kwargs(
+        InterpreterInfo,
         implementation=implementation,
         executable="n/a for this test",
         version_info=version_info,

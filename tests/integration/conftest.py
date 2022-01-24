@@ -24,7 +24,7 @@ def tox_ini(initproj):
 
 
 @pytest.fixture
-def mock_interpreter(monkeypatch):
+def mock_interpreter(monkeypatch, ignore_extra_kwargs):
     """
     Override the Python interpreters that tox discovers.
 
@@ -88,7 +88,10 @@ def mock_interpreter(monkeypatch):
             # PyPy always has extra_version_info.
             extra_version_info = (3, 7, 0, "final", 0)
 
-        interpreter_infos[name] = InterpreterInfo(
+        # (InterpreterInfo constructor has changed required kwargs
+        # over time, in ways which aren't relevant to this plugin.)
+        interpreter_infos[name] = ignore_extra_kwargs(
+            InterpreterInfo,
             implementation=implementation,
             executable=f"/mock_interpreter/{name}/python",
             version_info=version_info,

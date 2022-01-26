@@ -35,7 +35,7 @@ def tox_addoption(parser):
     )
 
 
-@hookimpl
+@hookimpl(trylast=True)
 def tox_configure(config: tox.config.Config):
     # Tox's --showconfig and --list (showenvs) options are handled as special
     # cases in tox.session.Session.runcommand, but it's unclear how a plugin

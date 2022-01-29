@@ -24,7 +24,7 @@ def tox_addoption(parser):
         "--gh-matrix",
         action="store",
         nargs="?",
-        const="toxenvs",
+        const="envlist",
         metavar="VAR",
         help="set GitHub workflow output %(metavar)s (default: '%(const)s') to workflow matrix",
     )

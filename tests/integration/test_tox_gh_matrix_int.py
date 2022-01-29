@@ -21,9 +21,9 @@ def test_gh_matrix(tox_ini, cmd, mock_interpreter):
     result = cmd("--gh-matrix")
     result.assert_success(is_run_test_env=False)
     gh_output = parse_gh_output(result)
-    assert "toxenvs" in gh_output  # default output name
-    toxenvs = json.loads(gh_output["toxenvs"])
-    assert toxenvs == [
+    assert "envlist" in gh_output  # default output name
+    envlist = json.loads(gh_output["envlist"])
+    assert envlist == [
         {
             "name": "django32-py38",
             "factors": ["django32", "py38"],
@@ -64,9 +64,9 @@ def test_custom_var(tox_ini, cmd):
     result.assert_success(is_run_test_env=False)
     gh_output = parse_gh_output(result)
     assert "myvarname" in gh_output
-    assert "toxenvs" not in gh_output  # default not set
-    toxenvs = json.loads(gh_output["myvarname"])
-    assert toxenvs == [
+    assert "envlist" not in gh_output  # default not set
+    envlist = json.loads(gh_output["myvarname"])
+    assert envlist == [
         {"name": "lint", "factors": ["lint"]},
         {"name": "test", "factors": ["test"]},
     ]
@@ -86,8 +86,8 @@ def test_installed_python(tox_ini, cmd, mock_interpreter):
     result = cmd("--gh-matrix")
     result.assert_success(is_run_test_env=False)
     gh_output = parse_gh_output(result)
-    toxenvs = json.loads(gh_output["toxenvs"])
-    assert toxenvs == [
+    envlist = json.loads(gh_output["envlist"])
+    assert envlist == [
         {
             "name": "py27",
             "factors": ["py27"],
@@ -132,8 +132,8 @@ def test_base_python(tox_ini, cmd, mock_interpreter):
     result = cmd("--gh-matrix")
     result.assert_success(is_run_test_env=False)
     gh_output = parse_gh_output(result)
-    toxenvs = json.loads(gh_output["toxenvs"])
-    assert toxenvs == [
+    envlist = json.loads(gh_output["envlist"])
+    assert envlist == [
         {"name": "check", "factors": ["check"]},
         {
             "name": "build",
@@ -156,8 +156,8 @@ def test_ignore_outcome(tox_ini, cmd):
     result = cmd("--gh-matrix")
     result.assert_success(is_run_test_env=False)
     gh_output = parse_gh_output(result)
-    toxenvs = json.loads(gh_output["toxenvs"])
-    assert toxenvs == [
+    envlist = json.loads(gh_output["envlist"])
+    assert envlist == [
         {"name": "release", "factors": ["release"]},
         {"name": "dev", "factors": ["dev"], "ignore_outcome": True},
     ]
@@ -174,9 +174,9 @@ def test_limited_envlist(tox_ini, cmd):
     result = cmd("--gh-matrix", "-e", "py35,py39,unknown-env")
     result.assert_success(is_run_test_env=False)
     gh_output = parse_gh_output(result)
-    assert "toxenvs" in gh_output
-    toxenvs = json.loads(gh_output["toxenvs"])
-    envnames = [env["name"] for env in toxenvs]
+    assert "envlist" in gh_output
+    envlist = json.loads(gh_output["envlist"])
+    envnames = [env["name"] for env in envlist]
     assert envnames == ["py35", "py39"]
     assert "unknown-env" not in envnames
 
@@ -195,8 +195,8 @@ def test_skip_env(tox_ini, cmd, monkeypatch):
     result = cmd("--gh-matrix")
     result.assert_success(is_run_test_env=False)
     gh_output = parse_gh_output(result)
-    toxenvs = json.loads(gh_output["toxenvs"])
-    envnames = [env["name"] for env in toxenvs]
+    envlist = json.loads(gh_output["envlist"])
+    envnames = [env["name"] for env in envlist]
     assert envnames == ["py38-win", "py39-win"]
 
 

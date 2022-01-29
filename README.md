@@ -1,19 +1,20 @@
 # tox-gh-matrix
 
-A [tox][] plugin that generates a GitHub workflow [build matrix][build-matrix]
-based on your tox.ini config.
+A [tox][] plugin that generates a JSON version of your tox.ini envlist,
+which can be used in a GitHub workflow [build matrix][build-matrix]
+(or potentially with other CI systems).
 
 [![Latest version on PyPi](https://img.shields.io/pypi/v/tox-gh-matrix.svg)][pypi-release]
 [![Build status](https://github.com/medmunds/tox-gh-matrix/workflows/test/badge.svg?branch=main)][build-status]
 
-This is useful when:
-* Your tox test environment list covers a complex set of factors
+This plugin is useful when:
+* Your tox.ini envlist covers a complex set of factors
   (e.g., all supported combinations of Django and Python versions).
-* You use GitHub actions and want to have each test environment
-  run in a separate workflow job (so that tests run in parallel and
-  GitHub's actions log breaks out the result for each environment).
+* You use GitHub actions and want to run each tox testenv
+  in a separate workflow job, so that tests run in parallel and so
+  GitHub's actions log breaks out the result for each testenv.
 * You're tired of manually syncing your workflow build matrix and
-  your tox environment list.
+  your tox.ini envlist.
 
 tox-gh-matrix adds a new `tox --gh-matrix` command line option that
 outputs a JSON representation of your tox envlist:
@@ -52,19 +53,19 @@ Your workflow can use this to define a build matrix from the tox envlist:
 
 ```yaml
 jobs:
-  get-toxenvs:
+  get-envlist:
     outputs:
-      toxenvs: ${{ steps.generate-toxenvs.outputs.toxenvs }}
+      envlist: ${{ steps.generate-envlist.outputs.envlist }}
     steps:
       # ... (details omitted; see complete example below)
-      - id: generate-toxenvs
+      - id: generate-envlist
         run: python -m tox --gh-matrix
 
   test:
-    needs: get-toxenvs
+    needs: get-envlist
     strategy:
       matrix:
-        tox: ${{ fromJSON(needs.get-toxenvs.outputs.toxenvs) }}
+        tox: ${{ fromJSON(needs.get-envlist.outputs.envlist) }}
     steps:
       # ... (details omitted; see complete example below)
       - uses: actions/setup-python@v2
@@ -103,7 +104,7 @@ your tox envlist is:
 1. Run `tox --gh-matrix` in a preliminary job, to generate a
    JSON version of your tox envlist.
 
-2. In your main test job, define a workflow [build matrix][]
+2. In your main test job, define a workflow [build matrix][build-matrix]
    property that iterates that list, using [`fromJSON()`][expression-fromJSON].
 
 
@@ -117,29 +118,29 @@ on: push
 jobs:
   # First, use tox-gh-matrix to construct a build matrix
   # from your tox.ini:
-  get-toxenvs:
+  get-envlist:
     runs-on: ubuntu-latest
     # Make the JSON envlist available to the test job:
     outputs:
-      toxenvs: ${{ steps.generate-toxenvs.outputs.toxenvs }}
+      envlist: ${{ steps.generate-envlist.outputs.envlist }}
     steps:
       # Checkout project code to get tox.ini:
       - uses: actions/checkout@v2
       # Install tox and tox-gh-matrix:
       - run: python -m pip install tox tox-gh-matrix
       # Run `tox --gh-matrix` to generate the JSON list:
-      - id: generate-toxenvs
+      - id: generate-envlist
         run: python -m tox --gh-matrix
 
   # Now run your tests using that matrix:
   test:
     # Pull in the JSON generated in the previous job:
-    needs: get-toxenvs
+    needs: get-envlist
     strategy:
       # Define a build matrix property `tox` that iterates
       # the envlist:
       matrix:
-        tox: ${{ fromJSON(needs.get-toxenvs.outputs.toxenvs) }}
+        tox: ${{ fromJSON(needs.get-envlist.outputs.envlist) }}
       # Run all matrix jobs, even if some fail:
       fail-fast: false
     # The workflow treats everything below as a template
@@ -186,16 +187,15 @@ of Python to run your tests.)
 ### Handling ignore outcome
 
 If you use tox's [`ignore_outcome`][ignore-outcome] setting to
-allow failures in certain environments, the jobs for those toxenvs
-will always show up in GitHub's actions log as successful.
+allow failures in certain testenvs, those jobs will always appear
+successful in GitHub's actions log.
 
 You may prefer to hoist the failure handling up to the workflow level,
-so you can see which toxenvs have failed in the actions log.
+so you can see which environments have failed in the actions log.
 
 tox-gh-matrix adds `"ignore_outcome": true` to each matrix
 item where your tox.ini specifies that option. You can check this
-in the workflow's [`continue-on-error`][continue-on-error] job step setting
-with `continue-on-error: ${{ matrix.tox.ignore_outcome == true }}`.
+in the workflow's [`continue-on-error`][continue-on-error] job step setting.
 
 You'll also need prevent tox from *actually* ignoring failures during
 those workflow runs. Tox doesn't have a built-in way to "ignore
@@ -219,7 +219,7 @@ jobs:
           TOX_OVERRIDE_IGNORE_OUTCOME: false
 ```
 
-(Only add this variable in the *test* job, not the *get-toxenvs* job.)
+(Only add this variable in the *test* job, not the *get-envlist* job.)
 
 Then, in your tox.ini change every `ignore_outcome = true` to use the
 environment variable (using tox's [environment variable substitution][tox-envvar-sub]
@@ -271,11 +271,13 @@ the `tox --gh-matrix` JSON might look something like this:
 ]
 ```
 
-The `python` field is only present if the toxenv specifies a
-Python version. (So in this example, there's no `python` field
-for the "docs" toxenv.) If you want to run something other than
-the system default Python, use tox's [`basepython`][basepython]
-setting to specify a version.
+The `python` field is only present if the tox testenv calls for
+a specific Python version–either implied with a `py*` factor or
+explicitly via the testenv's [`basepython`][basepython]
+setting. (So in this example, there's no `python` field
+for the "docs" testenv. If you wanted a specific Python there,
+you could add something like `basepython = py310` in your
+tox.ini's `[testenv:docs]` section .)
 
 When present, `python` is an object with two or three fields:
 
@@ -305,7 +307,7 @@ for most workflows is:
 If you don't want to use pre-release Python interpreters, change
 `python.spec` to `python.version` in both places.
 
-If your *get-toxenvs* job (that runs `tox --gh-matrix`) has a different
+If your *get-envlist* job (that runs `tox --gh-matrix`) has a different
 `runs-on` runner type than the *test* job (`tox -e ${{matrix.tox.name}}`),
 you will have different Python versions available on your test runners.
 In that case, you should ignore `python.installed` change the check
@@ -352,24 +354,24 @@ it's just changing some paths to alter the default.)
 
 ### Filtering the tox envlist
 
-Your tox envlist may include environments you *don't* want to test
-in your workflow. You can either restrict the toxenvs list when
+Your tox envlist may include environments you don't want to test
+in your workflow. You can either restrict the envlist when
 you call `tox --gh-matrix` to generate it, or you can use workflow
-conditionals to skip jobs based on tox factors or other tests.
+conditionals to skip jobs based on tox factors or other information.
 
 By default, tox-gh-matrix includes your entire tox.ini `envlist`
 in its JSON output. You can limit this with tox command line options
 or environment variables that [filter the envlist][tox-conf-envlist],
 such as `-e envlist`, `TOXENV` or `TOX_SKIP_ENV`.
 
-For example, if you wanted the matrix to omit all toxenvs
+For example, if you wanted the matrix to omit all tox testenvs
 containing `win` or `mac`, you could use:
 
 ```yaml
-  get-toxenvs:
+  get-envlist:
     steps:
       # ...
-      - id: generate-toxenvs
+      - id: generate-envlist
         env:
           # (TOX_SKIP_ENV is a Python regular expression)
           TOX_SKIP_ENV: ".*(win|mac).*"
@@ -382,14 +384,14 @@ manipulate the envlist, such as [tox-factor][] and [tox-envlist][].
 
 ### Examining tox factors
 
-The tox-gh-matrix JSON includes a list of tox [factors][] for each
-toxenv. You can use this with GitHub workflow [conditional execution][]
+The tox-gh-matrix JSON includes a list of tox [factors][] for each tox
+environment. You can use this with GitHub workflow [conditional execution][]
 to skip or include steps for certain factors.
 
 For example, you might use `if: contains(matrix.tox.factors, "pre")`
-to only execute a particular job step for toxenvs containing a "pre"
+to only execute a particular job step for tox environments containing a "pre"
 factor. Contrast that with `contains(matrix.tox.name, "pre")`
-which would do something similar but also match toxenvs containing
+which would do something similar but also match environments containing
 factors like "prep" or "present", which may or may not be what you want.
 
 (`factors` is a list of strings; `name` is a single string. In workflow
@@ -402,47 +404,47 @@ Running `tox --gh-matrix` sets a GitHub workflow [output parameter][]
 to the JSON build matrix. The actual output looks like this:
 
 ```text
-::set-output name=toxenvs::[{"name": ...json data
+::set-output name=envlist::[{"name": ...json data
 ```
 
-The default output name is `toxenvs`, but you change this with `tox --gh-matrix=VAR`.
+The default output name is `envlist`, but you change this with `tox --gh-matrix=VAR`.
 You can use this to (in combination with filtering) to create multiple matrices.
 
 Here's an example that uses custom output names, along with the [tox-factor][]
 filtering plugin, to construct separate matrices for Mac- and Windows specific
-tests (toxenvs with `mac` or `win` factors, respectively):
+tests (environments with `mac` or `win` factors, respectively):
 
 ```yaml
 jobs:
-  get-toxenvs:
+  get-envlist:
     runs-on: ubuntu-latest
     outputs:
-      mac-toxenvs: ${{ steps.generate-toxenvs.outputs.mac-toxenvs }}
-      win-toxenvs: ${{ steps.generate-toxenvs.outputs.win-toxenvs }}
+      mac-envlist: ${{ steps.generate-envlist.outputs.mac-envlist }}
+      win-envlist: ${{ steps.generate-envlist.outputs.win-envlist }}
     steps:
       - uses: actions/checkout@v2
       # Also install the tox-factor plugin:
       - run: python -m pip install tox tox-factor tox-gh-matrix
       # Run --gh-matrix twice with different filters and output names:
-      - id: generate-toxenvs
+      - id: generate-envlist
         run: |
-          python -m tox -f mac --gh-matrix=mac-toxenvs
-          python -m tox -f win --gh-matrix=win-toxenvs
+          python -m tox -f mac --gh-matrix=mac-envlist
+          python -m tox -f win --gh-matrix=win-envlist
 
   test-mac:
     runs-on: macos-latest
-    needs: get-toxenvs
+    needs: get-envlist
     strategy:
       matrix:
-        tox: ${{ fromJSON(needs.get-toxenvs.outputs.mac-toxenvs) }}
+        tox: ${{ fromJSON(needs.get-envlist.outputs.mac-envlist) }}
     # ...
 
   test-win:
     runs-on: windows-latest
-    needs: get-toxenvs
+    needs: get-envlist
     strategy:
       matrix:
-        tox: ${{ fromJSON(needs.get-toxenvs.outputs.win-toxenvs) }}
+        tox: ${{ fromJSON(needs.get-envlist.outputs.win-envlist) }}
     # ...
 ```
 
@@ -463,7 +465,7 @@ jobs:
     strategy:
       matrix:
         os: [macos-latest, windows-latest, ubuntu-latest]
-        tox: ${{ fromJSON(needs.get-toxenvs.outputs.toxenvs) }}
+        tox: ${{ fromJSON(needs.get-envlist.outputs.envlist) }}
     name: Test ${{ matrix.tox.name }} on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     steps:
@@ -485,11 +487,11 @@ indented) JSON build matrix, without any GitHub-specific output parameter
 syntax.
 
 This can be helpful for debugging the generated matrix (either run in your
-local development environment, or as a step in your *get-toxenvs* job).
+local development environment, or as a step in your *get-envlist* job).
 
 It could also be useful for integrating tox with other (non-GitHub) CI systems.
 
-(Or were you interested in
+(Or perhaps you were interested in
 [debugging *The Matrix*](https://www.imdb.com/title/tt0133093/goofs?tab=gf) ?)
 
 

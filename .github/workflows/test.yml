@@ -108,6 +108,9 @@ jobs:
         run: ls -Rla .tox
       - name: Install tox
         run: python -m pip install tox
+      - name: Get diff-against code
+        # Required for diff-cover command in coverage report
+        run: git fetch origin main:refs/remotes/origin/main
       - name: Generate coverage report
         run: python -m tox -e coverage
       - name: Store coverage report

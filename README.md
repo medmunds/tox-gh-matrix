@@ -168,7 +168,7 @@ own [workflow definition](./.github/workflows/test.yml).
 
 ### Installation
 
-Install tox-gh-plugin from PyPI using pip:
+Install tox-gh-matrix from PyPI using pip:
 
 `python -m pip install tox-gh-matrix`
 

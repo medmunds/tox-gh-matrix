@@ -38,7 +38,7 @@ jobs:
         run: |
           GIT_TAG="$(git tag -l --points-at HEAD 'v*')"
           echo "GIT_TAG=$GIT_TAG"
-          echo "::set-output name=git-tag::$GIT_TAG"
+          echo "git-tag=$GIT_TAG" >> $GITHUB_OUTPUT
 
   release:
     needs: is-release-tag
@@ -68,9 +68,9 @@ jobs:
             echo "::error ::package version '$TAG' does not match git tag '$GIT_TAG'"
             exit 1
           fi
-          echo "::set-output name=version::$VERSION"
-          echo "::set-output name=tag::$TAG"
-          echo "::set-output name=anchor::${TAG//[^[:alnum:]]/-}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "anchor=${TAG//[^[:alnum:]]/-}" >> $GITHUB_OUTPUT
 
       - name: Build
         run: |

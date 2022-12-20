@@ -68,7 +68,7 @@ jobs:
         tox: ${{ fromJSON(needs.get-envlist.outputs.envlist) }}
     steps:
       # ... (details omitted; see complete example below)
-      - uses: actions/setup-python@v2
+      - uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.tox.python.spec }}
       - run: python -m tox -e ${{ matrix.tox.name }}
@@ -125,7 +125,7 @@ jobs:
       envlist: ${{ steps.generate-envlist.outputs.envlist }}
     steps:
       # Checkout project code to get tox.ini:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       # Install tox and tox-gh-matrix:
       - run: python -m pip install tox tox-gh-matrix
       # Run `tox --gh-matrix` to generate the JSON list:
@@ -148,11 +148,11 @@ jobs:
     name: Test ${{ matrix.tox.name }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       # Install the required Python version if necessary:
       - name: Setup Python ${{ matrix.tox.python.version }}
         if: matrix.tox.python.spec && ! matrix.tox.python.installed
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.tox.python.spec }}
       # Install tox (you don't need tox-gh-matrix at this point):
@@ -299,7 +299,7 @@ for most workflows is:
     steps:
       - name: Setup Python ${{ matrix.tox.python.version }}
         if: matrix.tox.python.spec && ! matrix.tox.python.installed
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.tox.python.spec }}
 ```
@@ -329,16 +329,16 @@ and a second time to change back to a newer version of Python to run tox:
 
 ```yaml
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       # Install the required Python version if necessary:
       - name: Setup Python ${{ matrix.tox.python.version }}
         if: matrix.tox.python.spec && ! matrix.tox.python.installed
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.tox.python.spec }}
       # Now restore the default Python to something newer for tox:
       - name: Restore modern Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: "3.8"
       # Install and run tox with that newer Python:
@@ -422,7 +422,7 @@ jobs:
       mac-envlist: ${{ steps.generate-envlist.outputs.mac-envlist }}
       win-envlist: ${{ steps.generate-envlist.outputs.win-envlist }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       # Also install the tox-factor plugin:
       - run: python -m pip install tox tox-factor tox-gh-matrix
       # Run --gh-matrix twice with different filters and output names:
@@ -469,10 +469,10 @@ jobs:
     name: Test ${{ matrix.tox.name }} on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Setup Python ${{ matrix.tox.python.version }}
         if: matrix.tox.python.spec && ! matrix.tox.python.installed
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.tox.python.spec }}
       - run: python -m pip install tox

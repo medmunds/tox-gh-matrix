@@ -30,7 +30,7 @@ jobs:
       git-tag: ${{ steps.git-tag.outputs.git-tag }}
     steps:
       - name: Get code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           ref: ${{ github.event.workflow_run.head_branch }}
       - name: Identify git tag
@@ -48,7 +48,7 @@ jobs:
     environment: release
     steps:
       - name: Get code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           ref: ${{ github.event.workflow_run.head_branch }}
 

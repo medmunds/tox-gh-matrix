@@ -1,17 +1,8 @@
 import json
-import re
 from textwrap import dedent
 
 
-def parse_gh_output(result):
-    """Extract a dict of GitHub Workflow set-output variables from result's output"""
-    matches = re.findall(r"::set-output\s+name=(\w+)::(.*)\n", result.out)
-    if matches is None:
-        return dict()
-    return dict(matches)
-
-
-def test_gh_matrix(tox_ini, cmd, mock_interpreter):
+def test_gh_matrix(tox_ini, cmd, mock_interpreter, github_output):
     tox_ini(
         """
             [tox]
@@ -20,7 +11,7 @@ def test_gh_matrix(tox_ini, cmd, mock_interpreter):
     )
     result = cmd("--gh-matrix")
     result.assert_success(is_run_test_env=False)
-    gh_output = parse_gh_output(result)
+    gh_output = github_output()
     assert "envlist" in gh_output  # default output name
     envlist = json.loads(gh_output["envlist"])
     assert envlist == [
@@ -52,7 +43,7 @@ def test_gh_matrix(tox_ini, cmd, mock_interpreter):
     ]
 
 
-def test_custom_var(tox_ini, cmd):
+def test_custom_var(tox_ini, cmd, github_output):
     """--gh-matrix takes optional output variable name"""
     tox_ini(
         """
@@ -62,7 +53,7 @@ def test_custom_var(tox_ini, cmd):
     )
     result = cmd("--gh-matrix=myvarname")
     result.assert_success(is_run_test_env=False)
-    gh_output = parse_gh_output(result)
+    gh_output = github_output()
     assert "myvarname" in gh_output
     assert "envlist" not in gh_output  # default not set
     envlist = json.loads(gh_output["myvarname"])
@@ -72,7 +63,7 @@ def test_custom_var(tox_ini, cmd):
     ]
 
 
-def test_installed_python(tox_ini, cmd, mock_interpreter):
+def test_installed_python(tox_ini, cmd, mock_interpreter, github_output):
     """--gh-matrix provides 'python_installed' versions for available interpreters"""
     mock_interpreter("python3.5", version_info=(3, 5, 6, "final", 0))
     mock_interpreter("python3.10")
@@ -85,7 +76,7 @@ def test_installed_python(tox_ini, cmd, mock_interpreter):
     )
     result = cmd("--gh-matrix")
     result.assert_success(is_run_test_env=False)
-    gh_output = parse_gh_output(result)
+    gh_output = github_output()
     envlist = json.loads(gh_output["envlist"])
     assert envlist == [
         {
@@ -119,7 +110,7 @@ def test_installed_python(tox_ini, cmd, mock_interpreter):
     ]
 
 
-def test_base_python(tox_ini, cmd, mock_interpreter):
+def test_base_python(tox_ini, cmd, mock_interpreter, github_output):
     """Python version can come from an env's basepython"""
     tox_ini(
         """
@@ -131,7 +122,7 @@ def test_base_python(tox_ini, cmd, mock_interpreter):
     )
     result = cmd("--gh-matrix")
     result.assert_success(is_run_test_env=False)
-    gh_output = parse_gh_output(result)
+    gh_output = github_output()
     envlist = json.loads(gh_output["envlist"])
     assert envlist == [
         {"name": "check", "factors": ["check"]},
@@ -143,7 +134,7 @@ def test_base_python(tox_ini, cmd, mock_interpreter):
     ]
 
 
-def test_ignore_outcome(tox_ini, cmd):
+def test_ignore_outcome(tox_ini, cmd, github_output):
     """--gh-matrix identifies tox envs with ignore_outcome set"""
     tox_ini(
         """
@@ -155,7 +146,7 @@ def test_ignore_outcome(tox_ini, cmd):
     )
     result = cmd("--gh-matrix")
     result.assert_success(is_run_test_env=False)
-    gh_output = parse_gh_output(result)
+    gh_output = github_output()
     envlist = json.loads(gh_output["envlist"])
     assert envlist == [
         {"name": "release", "factors": ["release"]},
@@ -163,7 +154,7 @@ def test_ignore_outcome(tox_ini, cmd):
     ]
 
 
-def test_limited_envlist(tox_ini, cmd):
+def test_limited_envlist(tox_ini, cmd, github_output):
     """Explicit -e envlist limits --gh-matrix output"""
     tox_ini(
         """
@@ -173,7 +164,7 @@ def test_limited_envlist(tox_ini, cmd):
     )
     result = cmd("--gh-matrix", "-e", "py35,py39,unknown-env")
     result.assert_success(is_run_test_env=False)
-    gh_output = parse_gh_output(result)
+    gh_output = github_output()
     assert "envlist" in gh_output
     envlist = json.loads(gh_output["envlist"])
     envnames = [env["name"] for env in envlist]
@@ -181,7 +172,7 @@ def test_limited_envlist(tox_ini, cmd):
     assert "unknown-env" not in envnames
 
 
-def test_skip_env(tox_ini, cmd, monkeypatch):
+def test_skip_env(tox_ini, cmd, monkeypatch, github_output):
     """--gh-matrix filters out matches for TOX_SKIPENV"""
     tox_ini(
         """
@@ -194,7 +185,7 @@ def test_skip_env(tox_ini, cmd, monkeypatch):
     monkeypatch.setenv("TOX_SKIP_ENV", ".*-(unix|mac)")
     result = cmd("--gh-matrix")
     result.assert_success(is_run_test_env=False)
-    gh_output = parse_gh_output(result)
+    gh_output = github_output()
     envlist = json.loads(gh_output["envlist"])
     envnames = [env["name"] for env in envlist]
     assert envnames == ["py38-win", "py39-win"]

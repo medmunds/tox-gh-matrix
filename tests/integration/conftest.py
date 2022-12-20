@@ -1,5 +1,7 @@
 # Fixtures for our integration tests.
-
+import re
+import uuid
+from pathlib import Path
 from typing import Dict, Tuple
 
 import pytest
@@ -102,3 +104,50 @@ def mock_interpreter(monkeypatch, ignore_extra_kwargs):
         )
 
     yield install
+
+
+def parse_github_action_envfile(content: str) -> dict:
+    """
+    Return a dict of variables parsed from a GitHub action
+    environment/output/state file body. Handles single line
+    and multiline variable formats.
+    """
+    items = {}
+    for match in re.finditer(
+        # name=value | name<<EOF\nvalue...\n...\nEOF
+        r"(^(?P<sname>\w+)=(?P<svalue>.*)\n)"
+        r"|"
+        r"(^(?P<mname>\w+)<<(?P<eof>.*)\n(?P<mvalue>(?s:.*))^(?P=eof)\n)",
+        content,
+        re.MULTILINE,
+    ):
+        if match["sname"]:
+            items[match["sname"]] = match["svalue"]
+        elif match["mname"]:
+            items[match["mname"]] = match["mvalue"]
+        else:
+            raise ValueError("Unexpected match object")
+    return items
+
+
+@pytest.fixture
+def github_output(tmp_path, monkeypatch):
+    """
+    Fixture that implements a GITHUB_OUTPUT file as described in
+    https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#setting-an-output-parameter
+    """
+    output_path = tmp_path / f"github-output{uuid.uuid4()}.env"
+    output_path.touch()
+    monkeypatch.setenv("GITHUB_OUTPUT", str(output_path))
+
+    class ActionEnvFile(dict):
+        def __init__(self, path: Path):
+            self.path = path
+            self.content = path.read_text(encoding="utf-8")
+            parsed = parse_github_action_envfile(self.content)
+            super().__init__(parsed)
+
+    def read_output():
+        return ActionEnvFile(output_path)
+
+    yield read_output

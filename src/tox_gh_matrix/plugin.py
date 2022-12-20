@@ -1,12 +1,14 @@
 import json
 import os
+import pathlib
 import re
+import uuid
 from typing import Dict, Iterable, List
 
 import pluggy
 import tox.config
 from tox import reporter as report
-from tox.exception import ConfigError
+from tox.exception import ConfigError, MissingDependency
 from tox.interpreters import InterpreterInfo
 
 from .version_utils import (
@@ -49,7 +51,7 @@ def tox_configure(config: tox.config.Config):
             report.line(json.dumps(matrix, indent=2))
         if config.option.gh_matrix:
             # Set a GitHub workflow output parameter.
-            report.line(f"::set-output name={config.option.gh_matrix}::{json.dumps(matrix)}")
+            set_gh_output(config.option.gh_matrix, json.dumps(matrix))
         # Exit without executing any tox environments.
         raise SystemExit(0)
 
@@ -108,3 +110,20 @@ def tox_testenv_to_gh_config(env: tox.config.TestenvConfig) -> Dict:
     if env.ignore_outcome:
         gh_config["ignore_outcome"] = env.ignore_outcome
     return gh_config
+
+
+def set_gh_output(name: str, value: str):
+    """Append an output parameter to the GITHUB_OUTPUT file"""
+    gh_output = os.getenv("GITHUB_OUTPUT")
+    if not gh_output:
+        raise MissingDependency("GITHUB_OUTPUT environment variable not set")
+
+    if "\n" in value:
+        # Use multiline syntax, with a random terminator
+        eof = f"EOF-{uuid.uuid4()}"
+        encoded = f"{name}<<{eof}\n{value}\n{eof}\n"
+    else:
+        encoded = f"{name}={value}\n"
+
+    with pathlib.Path(gh_output).open("a") as f:
+        f.write(encoded)

@@ -23,7 +23,7 @@ jobs:
         run: |
           # If your project is *not* tox-gh-matrix itself, use this instead:
           #   python -m pip install tox tox-gh-matrix
-          python -m pip install tox .
+          python -m pip install 'tox<4' .
           tox --version
       - name: Generate tox envlist
         id: generate-envlist
@@ -64,7 +64,7 @@ jobs:
         with:
           python-version: ${{ steps.default-python.outputs.version }}
       - name: Install tox
-        run: python -m pip install tox
+        run: python -m pip install 'tox<4'
       - name: Test ${{ matrix.tox.name }}
         run: |
           python --version
@@ -107,7 +107,7 @@ jobs:
         # (for workflow debugging)
         run: ls -Rla .tox
       - name: Install tox
-        run: python -m pip install tox
+        run: python -m pip install 'tox<4'
       - name: Get diff-against code
         # Required for diff-cover command in coverage report
         run: git fetch origin main:refs/remotes/origin/main

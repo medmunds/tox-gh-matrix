@@ -50,7 +50,7 @@ jobs:
         id: default-python
         run: |
           # Set outputs.version to N.M Python version
-          python -c 'import sys; N, M = sys.version_info[:2]; print(f"::set-output name=version::{N}.{M}")'
+          python -c 'import sys; N, M = sys.version_info[:2]; print(f"version={N}.{M}")' >> $GITHUB_OUTPUT
       - name: Setup tox Python ${{ matrix.tox.python.version }}
         if: matrix.tox.python.spec && ! matrix.tox.python.installed
         # Ensure matrix Python version is installed and available for tox

@@ -401,11 +401,8 @@ expression syntax, `matrix.tox.name` is equivalent to `join(matrix.tox.factors, 
 ### Matrix output names and multiple envlists
 
 Running `tox --gh-matrix` sets a GitHub workflow [output parameter][]
-to the JSON build matrix. The actual output looks like this:
-
-```text
-::set-output name=envlist::[{"name": ...json data
-```
+to the JSON build matrix. (It appends to the `GITHUB_OUTPUT` file;
+you'll get an error if that environment variable isn't set properly.)
 
 The default output name is `envlist`, but you change this with `tox --gh-matrix=VAR`.
 You can use this to (in combination with filtering) to create multiple matrices.
